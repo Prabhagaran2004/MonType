@@ -187,7 +187,7 @@ export default function ZTypeGame() {
     ctx.fill();
     ctx.stroke();
 
-    ctx.shadowBlur = 20;
+    ctx.shadowBlur = 8;
     ctx.shadowColor = enemy.color;
     ctx.stroke();
 
@@ -201,8 +201,8 @@ export default function ZTypeGame() {
     ctx.textAlign = "center";
 
     if (typed) {
-      ctx.fillStyle = "#00ff00";
-      ctx.shadowBlur = 10;
+      ctx.fillStyle = "#000011";
+      ctx.shadowBlur = 4;
       ctx.shadowColor = "#00ff00";
       ctx.fillText(
         typed,
@@ -213,7 +213,7 @@ export default function ZTypeGame() {
 
     if (remaining) {
       ctx.fillStyle = "#ffffff";
-      ctx.shadowBlur = 5;
+      ctx.shadowBlur = 2;
       ctx.shadowColor = "#ffffff";
       ctx.fillText(
         remaining,
@@ -226,7 +226,7 @@ export default function ZTypeGame() {
   const drawParticle = (ctx: CanvasRenderingContext2D, particle: Particle) => {
     ctx.globalAlpha = particle.life;
     ctx.fillStyle = particle.color;
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = 4;
     ctx.shadowColor = particle.color;
     ctx.beginPath();
     ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
@@ -268,7 +268,7 @@ export default function ZTypeGame() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.fillStyle = "rgba(0, 0, 26, 0.3)";
+    ctx.fillStyle = "#000011";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Update and draw stars

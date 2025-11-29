@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useWallet } from "../contexts/WalletContext.tsx";
 
 const StatsScreen: React.FC = () => {
@@ -46,30 +46,70 @@ const StatsScreen: React.FC = () => {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            gap: 24,
           }}
         >
-          <button className="btn-ghost" onClick={() => navigate("/")}>
-            ◀ Back to Menu
-          </button>
-          <div
-            className="pixel-font"
-            style={{ fontSize: 18, color: "var(--accent-purple)" }}
-          >
-            MONADTYPE
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <button className="btn-ghost" onClick={() => navigate("/")}>
+              ◀ Back
+            </button>
+            <div
+              className="pixel-font"
+              style={{ fontSize: 18, color: "var(--accent-purple)" }}
+            >
+              MONADTYPE
+            </div>
           </div>
+
+          <nav style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <Link to="/leaderboard" className="btn-ghost">
+              Leaderboard
+            </Link>
+            <Link to="/stats" className="btn-ghost">
+              My Stats
+            </Link>
+            <Link to="/shop" className="btn-ghost">
+              Shop
+            </Link>
+          </nav>
         </div>
       </header>
 
       <main className="app-section" style={{ flex: 1, paddingBottom: 48 }}>
         <div
           className="page-container"
-          style={{ display: "flex", flexDirection: "column", gap: 32 }}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 32,
+            alignItems: "center",
+          }}
         >
+          <div style={{ textAlign: "center" }}>
+            <h1
+              className="pixel-font"
+              style={{ fontSize: 48, letterSpacing: "0.2em", marginBottom: 12 }}
+            >
+              MY STATS
+            </h1>
+            <p
+              style={{
+                fontSize: 20,
+                color: "var(--accent-purple)",
+                letterSpacing: "0.08em",
+              }}
+            >
+              Performance & Achievement Data
+            </p>
+          </div>
+
           <section
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
               gap: 24,
+              width: "100%",
+              maxWidth: 1000,
             }}
           >
             <div className="card">
@@ -144,7 +184,7 @@ const StatsScreen: React.FC = () => {
             </div>
           </section>
 
-          <section className="card">
+          <section className="card" style={{ width: "100%", maxWidth: 1000 }}>
             <h3
               className="pixel-font"
               style={{ fontSize: 16, marginBottom: 16 }}
@@ -166,7 +206,7 @@ const StatsScreen: React.FC = () => {
             </div>
           </section>
 
-          <section className="card">
+          <section className="card" style={{ width: "100%", maxWidth: 1000 }}>
             <h3
               className="pixel-font"
               style={{ fontSize: 16, marginBottom: 16 }}

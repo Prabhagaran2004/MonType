@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 interface LeaderboardRow {
   rank: number;
@@ -38,17 +38,32 @@ const LeaderboardScreen: React.FC = () => {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            gap: 24,
           }}
         >
-          <button className="btn-ghost" onClick={() => navigate("/")}>
-            ◀ Back
-          </button>
-          <div
-            className="pixel-font"
-            style={{ fontSize: 18, color: "var(--accent-purple)" }}
-          >
-            MONADTYPE
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <button className="btn-ghost" onClick={() => navigate("/")}>
+              ◀ Back
+            </button>
+            <div
+              className="pixel-font"
+              style={{ fontSize: 18, color: "var(--accent-purple)" }}
+            >
+              MONADTYPE
+            </div>
           </div>
+
+          <nav style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <Link to="/leaderboard" className="btn-ghost">
+              Leaderboard
+            </Link>
+            <Link to="/stats" className="btn-ghost">
+              My Stats
+            </Link>
+            <Link to="/shop" className="btn-ghost">
+              Shop
+            </Link>
+          </nav>
         </div>
       </header>
 
@@ -65,11 +80,17 @@ const LeaderboardScreen: React.FC = () => {
           <div style={{ textAlign: "center" }}>
             <h1
               className="pixel-font"
-              style={{ fontSize: 36, marginBottom: 12 }}
+              style={{ fontSize: 48, letterSpacing: "0.2em", marginBottom: 12 }}
             >
-              Global Leaderboard
+              GLOBAL LEADERBOARD
             </h1>
-            <p style={{ fontSize: 14, color: "var(--accent-purple)" }}>
+            <p
+              style={{
+                fontSize: 20,
+                color: "var(--accent-purple)",
+                letterSpacing: "0.08em",
+              }}
+            >
               On-Chain Verified Rankings
             </p>
           </div>
