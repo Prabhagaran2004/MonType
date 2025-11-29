@@ -17,6 +17,9 @@ A browser-based typing shooter game deployed on the Monad blockchain where playe
 - **MonadTypeToken**: ERC-20 token for rewards (MNTYPE)
 - **MonadTypeRewards**: Manages level rewards and prevents double-claiming
 
+### Wallet Address
+- **0xff39452d7ED862Df2410116Dd653154DAa48555F**
+
 ### Frontend
 
 - **React + TypeScript**: Modern web development with type safety
