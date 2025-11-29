@@ -11,7 +11,8 @@
     "hardhat": "hardhat",
     "compile": "hardhat compile",
     "deploy:testnet": "hardhat ignition deploy ./ignition/modules/MonadTypeDeploy.ts --network monad_testnet",
-    "deploy:local": "hardhat ignition deploy ./ignition/modules/MonadTypeDeploy.ts --network hardhat"
+    "deploy:local": "hardhat ignition deploy ./ignition/modules/MonadTypeDeploy.ts --network hardhat",
+    "vercel-build": "npm install --legacy-peer-deps && npm run build"
   },
   "devDependencies": {
     "@types/bun": "latest",
