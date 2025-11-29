@@ -619,47 +619,32 @@ export default function ZTypeGame() {
           }}
         >
           <h1
+            className="pixel-font"
             style={{
               fontSize: 72,
-              color: "#00ff00",
-              textShadow: "0 0 30px #00ff00",
+              color: "var(--accent-purple)",
+              letterSpacing: "0.2em",
               marginBottom: 30,
             }}
           >
-            Monad Type
+            MONADTYPE
           </h1>
           <p
             style={{
               fontSize: 24,
-              color: "#fff",
+              color: "var(--accent-purple)",
               marginBottom: 50,
+              letterSpacing: "0.08em",
             }}
           >
             Type words to destroy enemies!
           </p>
           <button
             onClick={startGame}
-            style={{
-              fontSize: 28,
-              padding: "20px 50px",
-              background: "#00ff00",
-              border: "3px solid #00ff00",
-              color: "#000",
-              cursor: "pointer",
-              textTransform: "uppercase",
-              boxShadow: "0 0 30px #00ff00",
-              fontFamily: "Courier New, monospace",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#000";
-              e.currentTarget.style.color = "#00ff00";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "#00ff00";
-              e.currentTarget.style.color = "#000";
-            }}
+            className="btn-primary"
+            style={{ fontSize: 20, padding: "0px 50px" }}
           >
-            START GAME
+            START MISSION
           </button>
         </div>
       )}
