@@ -11,8 +11,17 @@
     "outDir": "dist",
     "jsx": "react-jsx",
     "allowImportingTsExtensions": true,
-    "noEmit": true
+    "noEmit": true,
+    "types": ["vite/client"]
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "ignition", "scripts", "test"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "ignition",
+    "scripts",
+    "test",
+    "server",
+    "api"
+  ]
 }

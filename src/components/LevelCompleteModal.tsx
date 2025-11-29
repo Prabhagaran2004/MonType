@@ -51,7 +51,7 @@ const LevelCompleteModal: React.FC<LevelCompleteModalProps> = ({
 
     try {
       // Simulate API call
-      const response = await fetch("http://localhost:3001/api/level-complete", {
+      const response = await fetch("/api/level-complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ address: walletAddress, level, score }),
