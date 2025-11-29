@@ -1,0 +1,51 @@
+{
+  "name": "mon-hack",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "server": "bun run server/index.ts",
+    "hardhat": "hardhat",
+    "compile": "hardhat compile",
+    "deploy:testnet": "hardhat ignition deploy ./ignition/modules/MonadTypeDeploy.ts --network monad_testnet",
+    "deploy:local": "hardhat ignition deploy ./ignition/modules/MonadTypeDeploy.ts --network hardhat"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.5",
+    "@types/minimatch": "^6.0.0",
+    "@types/node": "^24.10.1",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
+    "@openzeppelin/contracts": "^5.4.0",
+    "@tailwindcss/postcss": "^4.1.17",
+    "@typechain/ethers-v6": "^0.5.1",
+    "@typechain/hardhat": "^9.1.0",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "autoprefixer": "^10.4.22",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "ethers": "^6.15.0",
+    "express": "^5.1.0",
+    "hardhat": "^3.0.16",
+    "postcss": "^8.5.6",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.6.3",
+    "tailwindcss": "^4.1.17",
+    "typechain": "^8.3.2",
+    "viem": "^2.40.3",
+    "vite": "^7.2.4"
+  }
+}
