@@ -132,108 +132,55 @@ export async function claimLevelReward(
       REWARDS_ABI
     );
 
-    // Encode the rewardPlayer function call
     const data = rewardsContract.interface.encodeFunctionData("rewardPlayer", [
       playerAddress,
       level,
     ]);
 
-    // Get the signer's address
-    const signerAddress = await signer.getAddress();
-
-    // Estimate gas (optional, can fail on RPC issues)
-    let gasLimit: string | bigint = "500000"; // Default gas limit
-    try {
-      // Try to estimate, but don't fail if it doesn't work
-      const provider = signer.provider;
-      if (provider) {
-        const estimate = await provider.estimateGas({
+    // Use MetaMask directly - this is the most reliable method
+    const txHash = await (window as any).ethereum.request({
+      method: "eth_sendTransaction",
+      params: [
+        {
+          from: playerAddress,
           to: CONTRACT_ADDRESSES.REWARDS,
           data: data,
-          from: signerAddress,
-        });
-        gasLimit = (estimate * 120n) / 100n; // Add 20% buffer
-      }
-    } catch (e) {
-      // Use default gas limit if estimation fails
-      console.log("Gas estimation failed, using default");
-    }
+          gas: "0x7a120", // 500000 in hex
+        },
+      ],
+    });
 
-    // Send the transaction using the signer
-    try {
-      const tx = await signer.sendTransaction({
-        to: CONTRACT_ADDRESSES.REWARDS,
-        data: data,
-        gasLimit: gasLimit,
-      });
-
-      // Transaction was sent, return immediately with hash
-      return {
-        success: true,
-        txHash: tx.hash,
-      };
-    } catch (sendError: any) {
-      // Check if user rejected
-      if (sendError.code === "ACTION_REJECTED") {
-        return {
-          success: false,
-          error: "Transaction rejected by user",
-        };
-      }
-
-      // For other send errors, still try via MetaMask
-      throw sendError;
-    }
+    // Transaction sent successfully
+    return {
+      success: true,
+      txHash: txHash,
+    };
   } catch (error: any) {
     console.error("Error claiming level reward:", error);
 
-    // Try direct MetaMask call as fallback
-    try {
-      const rewardsContract = new ethers.Contract(
-        CONTRACT_ADDRESSES.REWARDS,
-        REWARDS_ABI
-      );
+    // Parse error messages
+    let errorMsg = "Failed to claim reward";
 
-      const data = rewardsContract.interface.encodeFunctionData(
-        "rewardPlayer",
-        [playerAddress, level]
-      );
-
-      const txHash = await (window as any).ethereum.request({
-        method: "eth_sendTransaction",
-        params: [
-          {
-            from: await signer.getAddress(),
-            to: CONTRACT_ADDRESSES.REWARDS,
-            data: data,
-            gas: "0x7a120", // 500000 in hex
-          },
-        ],
-      });
-
-      return {
-        success: true,
-        txHash: txHash,
-      };
-    } catch (fallbackError: any) {
-      console.error("Fallback error:", fallbackError);
-
-      // Parse error messages
-      let errorMsg = "Failed to claim reward";
-      if (fallbackError.code === 4001) {
-        errorMsg = "Transaction rejected by user";
-      } else if (error.message?.includes("insufficient funds")) {
-        errorMsg = "Insufficient funds for gas";
-      } else if (error.message?.includes("already claimed")) {
-        errorMsg = "Already claimed reward for this level";
-      } else if (error.message) {
-        errorMsg = error.message;
-      }
-
-      return {
-        success: false,
-        error: errorMsg,
-      };
+    if (error.code === 4001 || error.code === "ACTION_REJECTED") {
+      errorMsg = "Transaction rejected by user";
+    } else if (error.message?.includes("insufficient funds")) {
+      errorMsg = "Insufficient funds for gas";
+    } else if (error.message?.includes("already claimed")) {
+      errorMsg = "Already claimed reward for this level";
+    } else if (
+      error.code === -32080 ||
+      error.message?.includes("HTTP client error")
+    ) {
+      // RPC error but transaction might have been submitted
+      errorMsg =
+        "Network error - check MetaMask activity to confirm transaction";
+    } else if (error.message) {
+      errorMsg = error.message;
     }
+
+    return {
+      success: false,
+      error: errorMsg,
+    };
   }
 }
