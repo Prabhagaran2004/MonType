@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: monadtype-backend
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm run server
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: BACKEND_PORT
+        value: 3001
