@@ -9,13 +9,19 @@ dotenv.config();
 const app = express();
 const PORT = process.env.BACKEND_PORT || 3001;
 
+// CORS Configuration
+const corsOptions = {
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: false,
+  optionsSuccessStatus: 200,
+  maxAge: 3600,
+};
+
 // Middleware
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  credentials: true,
-  optionsSuccessStatus: 200
-}));
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); // Enable preflight for all routes
 app.use(express.json());
 
 // Contract ABI (simplified for demo)
