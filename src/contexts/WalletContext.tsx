@@ -6,211 +6,292 @@ import React, {
   ReactNode,
 } from "react";
 import { ethers } from "ethers";
-import {
-  WalletState,
-  NetworkConfig,
-  TransactionResult,
-} from "../types/wallet.ts";
+import toast from "react-hot-toast";
 
-const MONAD_TESTNET: NetworkConfig = {
-  chainId: "0xA1BE", // 41454 in hex
-  chainName: "Monad Testnet",
-  rpcUrls: ["https://testnet-rpc.monad.xyz"],
-  nativeCurrency: {
-    name: "MON",
-    symbol: "MON",
-    decimals: 18,
-  },
-  blockExplorerUrls: ["https://explorer.testnet.monad.xyz"],
-};
+declare global {
+  interface Window {
+    ethereum: any;
+  }
+}
+
+export interface WalletState {
+  address: string | null;
+  isConnected: boolean;
+  balance: string;
+  chainId: number | null;
+  provider: ethers.BrowserProvider | null;
+  signer: ethers.Signer | null;
+}
 
 interface WalletContextType {
   wallet: WalletState;
-  connectWallet: () => Promise<TransactionResult>;
+  connectWallet: () => Promise<boolean>;
   disconnectWallet: () => void;
-  switchNetwork: () => Promise<TransactionResult>;
-  getTokenBalance: () => Promise<void>;
+  getBalance: () => Promise<string>;
+  switchToMonadTestnet: () => Promise<boolean>;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
-export const useWallet = () => {
-  const context = useContext(WalletContext);
-  if (!context) {
-    throw new Error("useWallet must be used within a WalletProvider");
-  }
-  return context;
-};
-
-interface WalletProviderProps {
-  children: ReactNode;
-}
-
-export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
+export const WalletProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   const [wallet, setWallet] = useState<WalletState>({
     address: null,
     isConnected: false,
+    balance: "0",
     chainId: null,
-    isCorrectNetwork: false,
-    tokenBalance: "0",
     provider: null,
     signer: null,
   });
 
-  const checkNetwork = async (): Promise<boolean> => {
-    if (!window.ethereum) return false;
-
+  const connectWallet = async (): Promise<boolean> => {
     try {
-      const chainId = await window.ethereum.request({ method: "eth_chainId" });
-      return chainId === MONAD_TESTNET.chainId;
-    } catch (error) {
-      console.error("Error checking network:", error);
-      return false;
-    }
-  };
-
-  const switchNetwork = async (): Promise<TransactionResult> => {
-    if (!window.ethereum) {
-      return { success: false, error: "MetaMask not installed" };
-    }
-
-    try {
-      await window.ethereum.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: MONAD_TESTNET.chainId }],
-      });
-
-      return { success: true };
-    } catch (switchError: any) {
-      // This error code indicates that the chain has not been added to MetaMask
-      if (switchError.code === 4902) {
-        try {
-          await window.ethereum.request({
-            method: "wallet_addEthereumChain",
-            params: [MONAD_TESTNET],
-          });
-          return { success: true };
-        } catch (addError) {
-          return { success: false, error: "Failed to add network" };
-        }
+      if (!window.ethereum) {
+        toast.error("❌ MetaMask is not installed!");
+        return false;
       }
-      return { success: false, error: "Failed to switch network" };
-    }
-  };
 
-  const getTokenBalance = async (): Promise<void> => {
-    if (!wallet.address || !wallet.provider) return;
+      toast.loading("🔌 Connecting wallet...");
 
-    try {
-      // For demo purposes, return a mock balance
-      // In production, you'd call the ERC20 contract
-      setWallet((prev) => ({
-        ...prev,
-        tokenBalance: "1000.5",
-      }));
-    } catch (error) {
-      console.error("Error getting token balance:", error);
-    }
-  };
-
-  const connectWallet = async (): Promise<TransactionResult> => {
-    if (!window.ethereum) {
-      return { success: false, error: "MetaMask not installed" };
-    }
-
-    try {
-      // Request account access
+      const provider = new ethers.BrowserProvider(window.ethereum);
       const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
       });
 
       if (accounts.length === 0) {
-        return { success: false, error: "No accounts found" };
+        toast.dismiss();
+        toast.error("❌ No accounts found");
+        return false;
       }
 
-      const provider = new ethers.BrowserProvider(window.ethereum);
+      const address = accounts[0];
       const signer = await provider.getSigner();
-      const address = await signer.getAddress();
-      const chainId = await window.ethereum.request({ method: "eth_chainId" });
-      const isCorrectNetwork = chainId === MONAD_TESTNET.chainId;
+
+      let balance = "0";
+      let chainId = 0;
+
+      try {
+        // Try to get balance and network info
+        const balanceWei = await provider.getBalance(address);
+        balance = ethers.formatEther(balanceWei);
+        const network = await provider.getNetwork();
+        chainId = Number(network.chainId);
+      } catch (rpcError) {
+        // If RPC fails (like Monad not available), just connect without balance
+        // Silently fail for RPC errors - balance will show as "0"
+        // Try to get chainId from MetaMask directly
+        try {
+          const hexChainId = await window.ethereum.request({
+            method: "eth_chainId",
+          });
+          chainId = parseInt(hexChainId, 16);
+        } catch {
+          chainId = 0;
+        }
+      }
 
       setWallet({
         address,
         isConnected: true,
+        balance,
         chainId,
-        isCorrectNetwork,
-        tokenBalance: "0",
         provider,
         signer,
       });
 
-      await getTokenBalance();
+      toast.dismiss();
+      toast.success(
+        `✅ Connected: ${address.slice(0, 6)}...${address.slice(-4)}`
+      );
+      return true;
+    } catch (error) {
+      toast.dismiss();
+      console.error("Error connecting wallet:", error);
 
-      return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+      if (error instanceof Error) {
+        if (error.message.includes("user rejected")) {
+          toast.error("❌ Connection rejected by user");
+        } else {
+          toast.error("❌ Failed to connect wallet");
+        }
+      } else {
+        toast.error("❌ Failed to connect wallet");
+      }
+      return false;
     }
   };
 
-  const disconnectWallet = (): void => {
+  const disconnectWallet = () => {
     setWallet({
       address: null,
       isConnected: false,
+      balance: "0",
       chainId: null,
-      isCorrectNetwork: false,
-      tokenBalance: "0",
       provider: null,
       signer: null,
     });
   };
 
-  useEffect(() => {
-    const checkConnection = async () => {
-      if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({
-            method: "eth_accounts",
-          });
+  const getBalance = async (): Promise<string> => {
+    if (!wallet.provider || !wallet.address) return "0";
+    try {
+      const balance = await wallet.provider.getBalance(wallet.address);
+      return ethers.formatEther(balance);
+    } catch (error) {
+      // Silently fail - RPC might not be available
+      return "0";
+    }
+  };
 
-          if (accounts.length > 0) {
-            await connectWallet();
+  const switchToMonadTestnet = async (): Promise<boolean> => {
+    try {
+      if (!window.ethereum) {
+        toast.error("❌ MetaMask is not installed!");
+        return false;
+      }
+
+      const monadChainId = "0xa1f6"; // 41454 in hex
+
+      try {
+        // Try to switch to Monad Testnet
+        await window.ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: monadChainId }],
+        });
+
+        // Update wallet state
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const network = await provider.getNetwork();
+        const signer = await provider.getSigner();
+
+        setWallet((prev) => ({
+          ...prev,
+          chainId: Number(network.chainId),
+          provider,
+          signer,
+        }));
+
+        toast.success("✅ Switched to Monad Testnet!");
+        return true;
+      } catch (switchError: any) {
+        // If network doesn't exist, add it
+        if (switchError.code === 4902) {
+          toast.loading("Adding Monad Testnet...");
+          try {
+            await window.ethereum.request({
+              method: "wallet_addEthereumChain",
+              params: [
+                {
+                  chainId: monadChainId,
+                  chainName: "Monad Testnet",
+                  nativeCurrency: {
+                    name: "Monad",
+                    symbol: "MON",
+                    decimals: 18,
+                  },
+                  rpcUrls: ["https://testnet-rpc.monad.xyz"],
+                  blockExplorerUrls: ["https://testnet.monad.xyz"],
+                },
+              ],
+            });
+
+            toast.dismiss();
+
+            // Update wallet state after adding
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const network = await provider.getNetwork();
+            const signer = await provider.getSigner();
+
+            setWallet((prev) => ({
+              ...prev,
+              chainId: Number(network.chainId),
+              provider,
+              signer,
+            }));
+
+            toast.success("✅ Monad Testnet added successfully!");
+            return true;
+          } catch (addError: any) {
+            toast.dismiss();
+            console.error("Error adding network:", addError);
+            toast.error(
+              "❌ Failed to add Monad Testnet. Add it manually in MetaMask."
+            );
+            return false;
           }
-        } catch (error) {
-          console.error("Error checking connection:", error);
         }
+
+        // User rejected the switch
+        if (switchError.code === 4001) {
+          toast.error("❌ Network switch cancelled");
+          return false;
+        }
+
+        console.error("Error switching network:", switchError);
+        toast.error("❌ Failed to switch network");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error in switchToMonadTestnet:", error);
+      toast.error("❌ Network switch failed");
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    const handleAccountsChanged = (accounts: string[]) => {
+      if (accounts.length === 0) {
+        disconnectWallet();
       }
     };
 
-    checkConnection();
-
-    // Listen for account changes
     if (window.ethereum) {
-      window.ethereum.on("accountsChanged", () => {
-        disconnectWallet();
-      });
-
-      window.ethereum.on("chainChanged", () => {
-        window.location.reload();
-      });
+      window.ethereum.on("accountsChanged", handleAccountsChanged);
     }
+
+    return () => {
+      if (window.ethereum) {
+        window.ethereum.removeListener(
+          "accountsChanged",
+          handleAccountsChanged
+        );
+      }
+    };
   }, []);
 
-  const value: WalletContextType = {
-    wallet,
-    connectWallet,
-    disconnectWallet,
-    switchNetwork,
-    getTokenBalance,
-  };
-
   return (
-    <WalletContext.Provider value={value}>{children}</WalletContext.Provider>
+    <WalletContext.Provider
+      value={{
+        wallet,
+        connectWallet,
+        disconnectWallet,
+        getBalance,
+        switchToMonadTestnet,
+      }}
+    >
+      {children}
+    </WalletContext.Provider>
   );
 };
 
-// Add TypeScript declaration for window.ethereum
-declare global {
-  interface Window {
-    ethereum?: any;
+export const useWallet = () => {
+  const context = useContext(WalletContext);
+  if (!context) {
+    return {
+      wallet: {
+        address: null,
+        isConnected: false,
+        balance: "0",
+        chainId: null,
+        provider: null,
+        signer: null,
+      },
+      connectWallet: async () => false,
+      disconnectWallet: () => {},
+      getBalance: async () => "0",
+      switchToMonadTestnet: async () => false,
+    };
   }
-}
+  return context;
+};

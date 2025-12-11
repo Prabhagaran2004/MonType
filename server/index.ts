@@ -64,6 +64,18 @@ const setupContract = () => {
   return { provider, wallet, contract };
 };
 
+// In-memory storage for player stats (in production, use a database)
+const playerStatsDB = new Map<
+  string,
+  {
+    address: string;
+    level: number;
+    score: number;
+    tokens: string;
+    lastPlayed: Date;
+  }
+>();
+
 // Rate limiting map (in production, use Redis)
 const rateLimitMap = new Map<string, { count: number; lastReset: number }>();
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
@@ -86,7 +98,109 @@ const checkRateLimit = (address: string): boolean => {
   return true;
 };
 
-// POST /api/level-complete - Reward player for completing a level
+// POST /api/claim-reward - Reward player for completing a level (alias)
+app.post("/api/claim-reward", async (req, res) => {
+  try {
+    const { playerAddress, level } = req.body;
+
+    // Validate input
+    if (!playerAddress || !level) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing required fields: playerAddress, level",
+      });
+    }
+
+    if (!ethers.isAddress(playerAddress)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid wallet address",
+      });
+    }
+
+    if (level < 1 || level > 10) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid level (must be 1-10)",
+      });
+    }
+
+    // Rate limiting
+    if (!checkRateLimit(playerAddress)) {
+      return res.status(429).json({
+        success: false,
+        error: "Too many requests. Please try again later.",
+      });
+    }
+
+    // Setup contract
+    const { contract } = setupContract();
+
+    // Check if level already claimed
+    const alreadyClaimed = await contract.hasClaimedLevel(playerAddress, level);
+    if (alreadyClaimed) {
+      return res.status(400).json({
+        success: false,
+        error: "Level reward already claimed",
+      });
+    }
+
+    // Get reward amount
+    const rewardAmount = await contract.getLevelReward(level);
+    if (rewardAmount === 0n) {
+      return res.status(400).json({
+        success: false,
+        error: "No reward configured for this level",
+      });
+    }
+
+    // Call rewardPlayer function
+    const tx = await contract.rewardPlayer(playerAddress, level);
+
+    console.log(`Reward transaction sent: ${tx.hash}`);
+
+    // Wait for transaction confirmation
+    const receipt = await tx.wait();
+
+    if (receipt.status === 1) {
+      res.json({
+        success: true,
+        txHash: tx.hash,
+        rewardAmount: ethers.formatEther(rewardAmount),
+        level,
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: "Transaction failed",
+      });
+    }
+  } catch (error: any) {
+    console.error("Error in /api/claim-reward:", error);
+
+    // Provide more specific error messages
+    if (error.code === "UNPREDICTABLE_GAS_LIMIT") {
+      return res.status(500).json({
+        success: false,
+        error: "Transaction failed. Please try again.",
+      });
+    }
+
+    if (error.code === "INSUFFICIENT_FUNDS") {
+      return res.status(500).json({
+        success: false,
+        error: "Insufficient funds for gas",
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
+});
+
+// POST /api/level-complete - Reward player for completing a level (legacy)
 app.post("/api/level-complete", async (req, res) => {
   try {
     const { address, level, score } = req.body;
@@ -235,6 +349,102 @@ app.get("/api/player-stats/:address", async (req, res) => {
     });
   }
 });
+
+// Health check endpoint
+app.get("/api/health", (req, res) => {
+  res.json({
+    success: true,
+    timestamp: new Date().toISOString(),
+    service: "MonadType Backend",
+  });
+});
+
+// POST /api/update-stats - Update player statistics
+app.post("/api/update-stats", async (req, res) => {
+  try {
+    const { address, level, score, tokens } = req.body;
+
+    if (!address || !level || score === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing required fields: address, level, score",
+      });
+    }
+
+    if (!ethers.isAddress(address)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid wallet address",
+      });
+    }
+
+    // Update or create player stats
+    const existingStats = playerStatsDB.get(address.toLowerCase());
+
+    if (
+      !existingStats ||
+      level > existingStats.level ||
+      score > existingStats.score
+    ) {
+      playerStatsDB.set(address.toLowerCase(), {
+        address,
+        level: Math.max(level, existingStats?.level || 0),
+        score: Math.max(score, existingStats?.score || 0),
+        tokens: tokens || "0",
+        lastPlayed: new Date(),
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Stats updated successfully",
+    });
+  } catch (error: any) {
+    console.error("Error in /api/update-stats:", error);
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
+});
+
+// GET /api/leaderboard - Get top players
+app.get("/api/leaderboard", async (req, res) => {
+  try {
+    // Convert map to array and sort by score
+    const leaderboard = Array.from(playerStatsDB.values())
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10) // Top 10 players
+      .map((entry) => ({
+        address: `${entry.address.slice(0, 6)}...${entry.address.slice(-4)}`,
+        level: entry.level,
+        score: entry.score,
+        tokens: entry.tokens,
+        lastPlayed: getTimeAgo(entry.lastPlayed),
+      }));
+
+    res.json({
+      success: true,
+      entries: leaderboard,
+    });
+  } catch (error: any) {
+    console.error("Error in /api/leaderboard:", error);
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
+});
+
+// Helper function to format time ago
+function getTimeAgo(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+
+  if (seconds < 60) return "Just now";
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+  return `${Math.floor(seconds / 86400)} days ago`;
+}
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {

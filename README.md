@@ -270,3 +270,18 @@ This project is licensed under the MIT License.
 ---
 
 **Built with ❤️ for the Monad ecosystem**
+
+# Development
+bun run dev          # Start frontend dev server
+bun run server       # Start backend API server
+bun run build        # Build for production
+bun run preview      # Preview production build
+
+# Smart Contracts
+bun run compile      # Compile contracts
+bun run deploy:testnet  # Deploy to Monad Testnet
+bun run hardhat      # Run hardhat commands
+
+# Scripts
+npx hardhat run scripts/fund-rewards.ts --network monad_testnet
+npx hardhat run scripts/setup-rewards.ts --network monad_testnet

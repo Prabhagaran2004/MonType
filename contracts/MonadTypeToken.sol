@@ -7,15 +7,17 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 /**
  * @title MonadTypeToken
  * @dev ERC20 token for rewarding players in the MonadType game
+ * Can be deployed on any EVM-compatible network (Sepolia, Monad, etc.)
  */
+
 contract MonadTypeToken is ERC20, Ownable {
     
-    constructor(address initialOwner) 
-        ERC20("MonadType Token", "MNTYPE") 
-        Ownable(initialOwner) 
+    constructor() 
+        ERC20("MonType Game Token", "MNTYPE") 
+        Ownable(msg.sender) 
     {
         // Mint initial supply to deployer (1 million tokens)
-        _mint(initialOwner, 1_000_000 * 10**18);
+        _mint(msg.sender, 1_000_000 * 10**18);
     }
 
     /**

@@ -8,10 +8,12 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 /**
  * @title MonadTypeRewards
  * @dev Contract for managing game rewards and leaderboard
+ * Can be deployed on any EVM-compatible network (Sepolia, Monad, etc.)
  */
+
 contract MonadTypeRewards is Ownable, ReentrancyGuard {
     
-    IERC20 public immutable rewardToken;
+    IERC20 public rewardToken;
     
     // Level => reward amount mapping
     mapping(uint256 => uint256) public levelRewards;
@@ -27,8 +29,8 @@ contract MonadTypeRewards is Ownable, ReentrancyGuard {
     event LevelRewardSet(uint256 indexed level, uint256 amount);
     event LevelUpdated(address indexed player, uint256 indexed level);
     
-    constructor(address _rewardToken, address initialOwner) 
-        Ownable(initialOwner) 
+    constructor(address _rewardToken) 
+        Ownable(msg.sender) 
     {
         rewardToken = IERC20(_rewardToken);
     }

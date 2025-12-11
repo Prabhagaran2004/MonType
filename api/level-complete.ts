@@ -17,6 +17,10 @@ const REWARDS_ABI = [
   "event RewardPaid(address indexed player, uint256 indexed level, uint256 amount)",
 ];
 
+// Default contract address (Monad Testnet)
+const DEFAULT_REWARDS_ADDRESS = "0x98A538511fF0ad568D5E32aa604C5Ef1f3046741";
+const DEFAULT_RPC_URL = "https://testnet-rpc.monad.xyz";
+
 // Rate limiting (in production, use Redis)
 const rateLimitMap = new Map<string, { count: number; lastReset: number }>();
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
@@ -40,43 +44,16 @@ const checkRateLimit = (address: string): boolean => {
 };
 
 const setupContract = () => {
-  if (!process.env.MONAD_TESTNET_RPC_URL) {
-    throw new Error("MONAD_TESTNET_RPC_URL not configured");
-  }
+  const rpcUrl = process.env.MONAD_TESTNET_RPC_URL || DEFAULT_RPC_URL;
+  const rewardsAddress = process.env.REWARDS_ADDRESS || DEFAULT_REWARDS_ADDRESS;
 
   if (!process.env.PRIVATE_KEY) {
-    throw new Error("PRIVATE_KEY not configured");
+    throw new Error("PRIVATE_KEY not configured in environment variables");
   }
 
-  if (!process.env.REWARDS_ADDRESS) {
-    throw new Error("REWARDS_ADDRESS not configured");
-  }
-
-  // For demo purposes, return a mock contract if not configured
-  if (process.env.REWARDS_ADDRESS === "0x..." || !process.env.REWARDS_ADDRESS) {
-    return {
-      provider: null,
-      wallet: null,
-      contract: {
-        hasClaimedLevel: async () => false,
-        getLevelReward: async () => ethers.parseEther("10"),
-        rewardPlayer: async () => ({
-          hash: "0x" + Math.random().toString(16).substr(2, 64),
-          wait: async () => ({ status: 1 }),
-        }),
-      },
-    };
-  }
-
-  const provider = new ethers.JsonRpcProvider(
-    process.env.MONAD_TESTNET_RPC_URL
-  );
+  const provider = new ethers.JsonRpcProvider(rpcUrl);
   const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
-  const contract = new ethers.Contract(
-    process.env.REWARDS_ADDRESS,
-    REWARDS_ABI,
-    wallet
-  );
+  const contract = new ethers.Contract(rewardsAddress, REWARDS_ABI, wallet);
 
   return { provider, wallet, contract };
 };
